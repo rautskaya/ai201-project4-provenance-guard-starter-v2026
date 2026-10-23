@@ -42,62 +42,52 @@ Two things worth knowing before you pick numbers:
   a **miss**.
 
 ---
-## 1.
-
-<!-- Your criterion. It must name a number. -->
-
-
+## 1. False positives
+Out of 10 human-written texts, no more than 1 should be labeled as high-confidence AI. 
 
 **Why this target:**
-
+I want to avoid incorrectly accusing real writers of using AI. A false accusation can be more harmful than failing to detect AI-generated text.
 
 
 ---
 
-## 2.
+## 2. Score spread
 
-<!-- Your criterion. -->
-
+The average AI score for 10 AI-generated texts should be at least 0.20 higher than the average score for 10 human-written texts.
 
 
 **Why this target:**
-
+We need to show a clear difference between human and AI writing. If the scores are too similar, the system cannot distinguish them well.
 
 
 ---
 
-## 3.
+## 3. Label coverage
 
-<!-- Your criterion. -->
-
+The system should be able to return all three labels: high-confidence human, unsure, and high-confidence AI. 
 
 
 **Why this target:**
-
+The system should handle both clear and uncertain cases instead of forcing every submission to be labeled AI or human.
 
 
 ---
 
-## 4.
+## 4. Appeal path
 
-<!-- Your criterion. -->
-
-
+All 5 valid appeals should change the submission status to under_review and create a record in the audit log.
 
 **Why this target:**
-
-
+Writers should have a way to challenge incorrect results. Every appeal should be recorded so it can be reviewed later.
 
 ---
 
-## 5.
-
-<!-- Your criterion. -->
-
+## 5. Bad input
+The system should reject all 5 invalid submissions. Each should return a clear error without crashing the service.
 
 
 **Why this target:**
-
+The system should handle invalid requests safely and provide useful error messages instead of crashing.
 
 
 ---
