@@ -36,54 +36,109 @@
 
 ## What This Does
 
-<!-- The path a submission takes, from arriving to the label a reader sees.
-     Six or seven steps — this is the trace you wrote in Milestone 1. -->
+The user submits text and their creator ID through the POST /submit endpoint.
 
+The system checks that the input is valid.
 
+detector.py analyzes how predictable the text is and returns an AI score between 0 and 1.
+
+stylometry.py analyzes sentence lengths, vocabulary, and punctuation and returns another AI score between 0 and 1.
+
+scoring.py combines both scores into one final AI score.
+
+The system uses thresholds to decide whether the text is likely AI-written, likely human-written, or uncertain.
+
+The system saves the result in the audit log and returns a content ID, guess, confidence score, and label to the user. If the user disagrees, they can submit an appeal through POST /appeal.
+
+API Endpoints
+
+1. POST /submit
+
+Accepts text from a user and analyzes whether it might be AI-generated.
+
+Input:
+
+text (string): The text submitted by the user.
+
+creator_id (string): Identifies the writer.
+
+Output:
+
+content_id (string): Unique ID for the submission.
+
+guess (string): AI or human.
+
+confidence (float): Confidence score between 0 and 1.
+
+label (string): Message shown to the reader.
+
+2. POST /appeal
+
+Allows a writer to challenge the AI detection result.
+
+Input:
+
+content_id (string): ID of the original submission.
+
+reason (string): Why the writer disagrees with the result.
+
+Output:
+
+content_id (string): ID of the original submission.
+
+status (string): Changes to under_review.
+
+message (string): Confirms the appeal was recorded.
+
+The appeal is also saved in the audit log.
 
 ---
 
 ## Signals and Scoring
 
-<!-- For each signal: what property it measures, why that might differ between
-     human and AI writing, and WHAT IT CAN'T SEE.
-
-     The blind spot is not optional. If you can't name it you don't understand
-     the signal yet — and unit 8's attack set is built out of blind spots. -->
-
 ### Signal one — the model signal
 
 **What it measures:**
+It measures how predictable the text is using a language model. More predictable text gets a higher AI score.
 
 **Why that might differ between human and AI writing:**
+AI often uses common words and predictable sentences. Human writing may have more unusual word choices.
 
 **What it can't see:**
+It cannot tell who actually wrote the text. A human using simple English may get a high AI score. AI text with unusual words may get a low AI score.
 
 ### Signal two — the style signal
 
 **What it measures:**
+It measures sentence length variation, vocabulary variety, and punctuation. It looks at how the text is written, not what it means.
 
 **Why that might differ between human and AI writing:**
+AI writing may have more similar sentence lengths and repeated words. Human writing may have more variation.
 
 **What it can't see:**
+It cannot understand the meaning or identify the real author. Someone can change punctuation, sentence lengths, or words in AI-generated text to make it look more human.
 
 ### The combining rule
 
-<!-- Write the rule in words, then give the numbers. What happens when the two
-     signals disagree? -->
-
 **The rule:**
+A weighted average of both signals. Give them equal weight. If the signals disagree, the final score will fall between them. If the result is not clear, the system will return an uncertain label.
 
 **The numbers:**
+Model signal: 50%
+
+Style signal: 50%
+
+Combined score = (model score × 0.5) + (style score × 0.5)
 
 **Where it lives:** `scoring.py::combine_signals`
 
-<!-- ⚠️ The grader checks your code against that line. If your rule lives
-     somewhere else, say where. -->
-
 **A case where my two signals split, and what my rule does with it:**
 
+For example, the model gives a score of 0.9 (AI-like), but the style signal gives 0.2 (human-like).
 
+Combined score = (0.9 × 0.5) + (0.2 × 0.5) = 0.55
+
+Since the signals disagree, I would want the system to show an uncertain label instead of confidently saying the text was written by AI.
 
 ---
 
