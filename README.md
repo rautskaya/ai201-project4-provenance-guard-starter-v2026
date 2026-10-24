@@ -144,47 +144,31 @@ Since the signals disagree, I would want the system to show an uncertain label i
 
 ## Label Variants
 
-<!-- The exact text of all three labels, as a reader would see them, and the
-     score range each covers.
-
-     Write them for someone who has never heard the word "threshold". -->
-
 | Label | Score range | The exact text a reader sees |
 |---|---|---|
-| high-confidence human |  |  |
-| unsure |  |  |
-| high-confidence AI |  |  |
+| high-confidence human | 0.00–0.30 | This text is likely written by a human. |
+| unsure | Above 0.30 and below 0.80 | We cannot confidently determine whether this text was written by a human or AI. |
+| high-confidence AI | 0.80–1.00 | This text shows strong signs of AI-generated writing, but the result is not certain. |
 
 **Why I worded the "unsure" one this way:**
-<!-- It's the hardest of the three. It has to admit uncertainty without
-     sounding like an accusation, because the person reading it may well have
-     written every word themselves. -->
-
-
+I want to make it clear that the system cannot always tell whether text was written by AI or a human. I don't want to wrongly accuse someone of using AI when they wrote the text themselves.
 
 ---
 
 ## Sample Run
 
-<!-- One submission and one appeal, pasted as text: the request, the response,
-     and the log entries. -->
-
 **A submission**
-
-<!-- The response needs content_id, guess, confidence, label, AND both
-     signal scores - model_score and style_score. Unit 8's tools read those
-     two off the response, so leaving them out costs you next unit's
-     diagnostics. -->
-
-```bash
-$ curl -X POST http://127.0.0.1:5000/submit \
+curl -X POST http://127.0.0.1:5000/submit \
   -H "Content-Type: application/json" \
-  -d '{"text": "...", "creator_id": "..."}'
-```
-
-```json
-
-```
+  -d '{"text":"Technology helps people communicate and learn new things. Many people use computers every day for work and education. These tools make it easier to share information and complete tasks.","creator_id":"user123"}'
+{
+  "confidence": 0.5,
+  "content_id": "c9eeaada-ecc0-4d70-b67e-085e21c2d502",
+  "guess": "unknown",
+  "label": "Not evaluated yet",
+  "model_score": 0.7379,
+  "style_score": null
+}
 
 **An appeal**
 
@@ -200,15 +184,34 @@ $ curl -X POST http://127.0.0.1:5000/appeal \
 
 **What the log shows afterwards**
 
-```bash
-$ curl "http://127.0.0.1:5000/log?limit=3"
-```
-
-```json
-
-```
-
----
+curl http://127.0.0.1:5000/log
+{
+  "count": 2,
+  "entries": [
+    {
+      "combined_score": null,
+      "content_id": "d38726fd-2bd8-4672-8531-11fb53629df9",
+      "creator_id": "user123",
+      "guess": "unknown",
+      "label": "Not evaluated yet",
+      "model_score": 0.5839,
+      "status": "decided",
+      "style_score": null,
+      "timestamp": "2026-10-24T21:50:35+00:00"
+    },
+    {
+      "combined_score": null,
+      "content_id": "c9eeaada-ecc0-4d70-b67e-085e21c2d502",
+      "creator_id": "user123",
+      "guess": "unknown",
+      "label": "Not evaluated yet",
+      "model_score": 0.7379,
+      "status": "decided",
+      "style_score": null,
+      "timestamp": "2026-10-24T21:56:31+00:00"
+    }
+  ]
+}
 
 ## How I Used AI
 
