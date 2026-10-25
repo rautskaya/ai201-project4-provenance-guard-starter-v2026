@@ -134,11 +134,15 @@ Combined score = (model score × 0.5) + (style score × 0.5)
 
 **A case where my two signals split, and what my rule does with it:**
 
-For example, the model gives a score of 0.9 (AI-like), but the style signal gives 0.2 (human-like).
+I tested both signals on the same three texts: AI-generated, human-like, and borderline writing.
 
-Combined score = (0.9 × 0.5) + (0.2 × 0.5) = 0.55
+In one test, the model signal gave a score of 0.80, while the style signal gave 0.30. The model considered the text AI-like, but the style signal considered it more human-like.
 
-Since the signals disagree, I would want the system to show an uncertain label instead of confidently saying the text was written by AI.
+My combining rule gives both signals equal weight:
+
+Combined score = (0.80 × 0.5) + (0.30 × 0.5) = 0.55.
+
+Since the combined score is in my uncertain range, the system would return an "unsure" label.
 
 ---
 
@@ -146,8 +150,8 @@ Since the signals disagree, I would want the system to show an uncertain label i
 
 | Label | Score range | The exact text a reader sees |
 |---|---|---|
-| high-confidence human | 0.00–0.30 | This text is likely written by a human. |
-| unsure | Above 0.30 and below 0.80 | We cannot confidently determine whether this text was written by a human or AI. |
+| high-confidence human | 0.00–0.50 | This text is likely written by a human. |
+| unsure | Above 0.50 and below 0.80 | We cannot confidently determine whether this text was written by a human or AI. |
 | high-confidence AI | 0.80–1.00 | This text shows strong signs of AI-generated writing, but the result is not certain. |
 
 **Why I worded the "unsure" one this way:**

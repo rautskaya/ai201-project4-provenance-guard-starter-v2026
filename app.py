@@ -30,6 +30,9 @@ from flask import Flask, jsonify, request
 
 import audit
 import config
+import detector
+import stylometry
+import scoring
 
 app = Flask(__name__)
 
@@ -179,12 +182,17 @@ def submit():
         return jsonify({"error": str(exc)}), 400
     except detector.DetectorUnavailable as exc:
         return jsonify({"error": str(exc)}), 503
+    
+    # Signal two: analyze writing style
+    style_score = stylometry.style_signal(text)
+
+    # Combine both signals
+    combined_score = scoring.combine_signals(model_score, style_score)
 
     # Temporary placeholders 
     guess = "unknown"
     confidence = 0.5
     label = "Not evaluated yet"
-    style_score = None
 
     # Save the decision in the audit log
     audit.log_decision(
@@ -193,7 +201,7 @@ def submit():
         guess=guess,
         model_score=model_score,
         style_score=style_score,
-        combined_score=None,
+        combined_score=combined_score,
         label=label,
         status="decided"
     )
