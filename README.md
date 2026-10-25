@@ -80,7 +80,7 @@ Input:
 
 content_id (string): ID of the original submission.
 
-reason (string): Why the writer disagrees with the result.
+reasoning (string): Why the writer disagrees with the result.
 
 Output:
 
@@ -150,9 +150,9 @@ Since the combined score is in my uncertain range, the system would return an "u
 
 | Label | Score range | The exact text a reader sees |
 |---|---|---|
-| high-confidence human | 0.00–0.50 | This text is likely written by a human. |
-| unsure | Above 0.50 and below 0.80 | We cannot confidently determine whether this text was written by a human or AI. |
-| high-confidence AI | 0.80–1.00 | This text shows strong signs of AI-generated writing, but the result is not certain. |
+| high-confidence human | 0.00–0.45 | This text is likely written by a human. |
+| unsure | Above 0.45 and below 0.65 | We cannot confidently determine whether this text was written by a human or AI. |
+| high-confidence AI | 0.65–1.00 | This text shows strong signs of AI-generated writing, but the result is not certain. |
 
 **Why I worded the "unsure" one this way:**
 I want to make it clear that the system cannot always tell whether text was written by AI or a human. I don't want to wrongly accuse someone of using AI when they wrote the text themselves.
@@ -164,72 +164,73 @@ I want to make it clear that the system cannot always tell whether text was writ
 **A submission**
 curl -X POST http://127.0.0.1:5000/submit \
   -H "Content-Type: application/json" \
-  -d '{"text":"Technology helps people communicate and learn new things. Many people use computers every day for work and education. These tools make it easier to share information and complete tasks.","creator_id":"user123"}'
+  -d '{"text":"The bus was late again. Seven minutes, maybe eight. I stood beside a yellow newspaper box watching a pigeon attack someone'\''s abandoned sandwich. Strange little creature. Across the street, a man in a purple coat was arguing with a parking meter. I couldn'\''t hear what he was saying, but he looked genuinely offended. Then the bus appeared, completely empty except for a woman carrying an enormous plastic cactus. Why a cactus? No idea. I got on, tapped my card, and sat near the back. The driver had a tiny rubber duck attached to the dashboard. It squeaked every time we hit a bump.","creator_id":"user789"}'
 {
-  "confidence": 0.5,
-  "content_id": "c9eeaada-ecc0-4d70-b67e-085e21c2d502",
-  "guess": "unknown",
-  "label": "Not evaluated yet",
-  "model_score": 0.7379,
-  "style_score": null
+  "combined_score": 0.51345,
+  "confidence": 0.51345,
+  "content_id": "e0619d2d-c26e-4d05-bc50-7ea55bb3a486",
+  "guess": "unsure",
+  "label": "We cannot confidently determine whether this text was written by a human or AI.",
+  "model_score": 0.573,
+  "style_score": 0.4539
 }
 
 **An appeal**
 
-```bash
-$ curl -X POST http://127.0.0.1:5000/appeal \
+curl -X POST http://127.0.0.1:5000/appeal \
   -H "Content-Type: application/json" \
-  -d '{"content_id": "...", "reasoning": "..."}'
-```
-
-```json
-
-```
+  -d '{"content_id":"e9572934-b755-4045-956e-87c476797f93","reasoning":"I wrote this text myself and disagree with the AI detection result."}'
+{
+  "content_id": "e9572934-b755-4045-956e-87c476797f93",
+  "message": "Your appeal has been recorded.",
+  "status": "under_review"
+}
 
 **What the log shows afterwards**
 
-curl http://127.0.0.1:5000/log
+curl "http://127.0.0.1:5000/log?limit=2"
 {
   "count": 2,
   "entries": [
     {
-      "combined_score": null,
-      "content_id": "d38726fd-2bd8-4672-8531-11fb53629df9",
-      "creator_id": "user123",
-      "guess": "unknown",
-      "label": "Not evaluated yet",
-      "model_score": 0.5839,
+      "combined_score": 0.51345,
+      "content_id": "e0619d2d-c26e-4d05-bc50-7ea55bb3a486",
+      "creator_id": "user789",
+      "guess": "unsure",
+      "label": "We cannot confidently determine whether this text was written by a human or AI.",
+      "model_score": 0.573,
       "status": "decided",
-      "style_score": null,
-      "timestamp": "2026-10-24T21:50:35+00:00"
+      "style_score": 0.4539,
+      "timestamp": "2026-10-25T18:12:09+00:00"
     },
     {
-      "combined_score": null,
-      "content_id": "c9eeaada-ecc0-4d70-b67e-085e21c2d502",
+      "content_id": "e9572934-b755-4045-956e-87c476797f93",
       "creator_id": "user123",
-      "guess": "unknown",
-      "label": "Not evaluated yet",
-      "model_score": 0.7379,
-      "status": "decided",
-      "style_score": null,
-      "timestamp": "2026-10-24T21:56:31+00:00"
+      "event": "appeal",
+      "reasoning": "I wrote this text myself and disagree with the AI detection result.",
+      "status": "under_review",
+      "timestamp": "2026-10-25T18:12:41+00:00"
     }
   ]
 }
 
 ## How I Used AI
 
-**Moment 1**
+Moment 1 — Understanding the scoring system
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+What I asked for: Explain how the two signals work, why they might disagree, and how to combine their scores.
 
-**Moment 2**
+What came back: The differences between the signals and how weighted averages and thresholds work.
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+What I changed: I decided to give both signals equal weight (50/50) and chose my own thresholds for human (0.45) and AI (0.65).
+
+Moment 2 — Implementing the API endpoints
+
+What I asked for: Help me implement the /submit and /appeal endpoints.
+
+What came back: Processing submissions, saving results, and recording appeals.
+
+What I changed: Tested the endpoints using curl, and adjusted the scoring thresholds based on my test results.
 
 <!-- ═══════════════════════ UNIT 8 — THE TEST ═══════════════════════ -->
 
