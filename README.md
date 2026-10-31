@@ -238,7 +238,7 @@ What I changed: Tested the endpoints using curl, and adjusted the scoring thresh
 
 ## Rate Limiting
 
-**My limits:** ___ per minute, ___ per day
+**My limits:** 5 per minute, 50 per day
 
 **Why those numbers and not others:**
 <!-- Think about two people: a real writer submitting their own work a few
@@ -251,9 +251,27 @@ differently — one script can look like a thousand callers, and one household
 can look like one. -->
 
 **The run of status codes when I pushed past it:**
+  [ 1/15] 200
+  [ 2/15] 200
+  [ 3/15] 200
+  [ 4/15] 200
+  [ 5/15] 200
+  [ 6/15] 429
+  [ 7/15] 429
+  [ 8/15] 429
+  [ 9/15] 429
+  [10/15] 429
+  [11/15] 429
+  [12/15] 429
+  [13/15] 429
+  [14/15] 429
+  [15/15] 429
 
-<!-- python run_attacks.py --flood 15 -->
+============================================================
+200 200 200 200 200 429 429 429 429 429 429 429 429 429 429
+============================================================
 
+10 of 15 were rate limited.
 ```
 
 ```
