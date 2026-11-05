@@ -168,6 +168,11 @@ def submit():
     # Validate input
     if not isinstance(text, str) or not text.strip():
         return jsonify({"error": "Text is required"}), 400
+    
+    if len(text) > 10000:
+        return jsonify({
+            "error": "Text must be 10,000 characters or fewer"
+        }), 400
 
     if not isinstance(creator_id, str) or not creator_id.strip():
         return jsonify({"error": "Creator ID is required"}), 400

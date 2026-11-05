@@ -479,58 +479,154 @@ Audit-log output returned by: `app.py::get_log`
 
 **Diagnoses**
 
-<!-- For each miss AND each broken attack: the stage and the mechanism.
+Missed criterion 5 — Bad input
 
-     Your service has five stages: the route, signal one, signal two, the
-     combining rule, and the label mapping.
+Stage: route (app.py::submit). The route checks that text is a nonempty string, but does not check its maximum length. The oversized input therefore reached the detector and returned 200 with an AI label, instead of being rejected. This happened in all three trials: only 4 of 5 invalid requests were rejected.
 
-     Not a diagnosis:  "The evasion attacks got through."
-     A diagnosis:      "Four evasion inputs got through. All four had typos
-                        added to AI-generated text. My second signal measures
-                        word variety, and typos raise word variety — so it read
-                        them as more human. My combining rule weights that
-                        signal at 0.6, so it dragged the whole score down."
-
-     Look for a pattern. Five failures on one signal is one problem, not five. -->
-
-
-
+Broken attacks
+Attacks	Stage	What went wrong
+EV01, EV05, EV08	Signal one and combining rule	The model gave these AI samples low scores. Averaging with the style scores still produced human labels. For example, EV01’s text with typos received a model score of 0.164 and a final score of 0.389, labeled human.
+EV02, EV06	Signal two and combining rule	Lower style scores pulled the final scores into the unsure range. For example, EV02 received 0.594 from the model and 0.381 from style, producing 0.488 overall.
+EV03, EV09	Combining rule	Lower style scores reduced higher model scores, resulting in unsure. For example, EV09’s model score was 0.704, but combining it with style produced 0.609.
+MF03–MF06	Route validation	Nonempty strings were accepted without checking whether they contained enough meaningful writing to classify. Control characters, punctuation, a long single word, and emoji all received authorship labels. For example, emoji-only MF06 was labeled AI with a score of 0.748.
 ---
 
 ## The Improvement
 
 **What I changed:**
+Added a 10,000-character limit in app.py::submit. Longer text now returns a clear 400 error before scoring. This prevents oversized submissions from being processed, but also rejects legitimate writing above the limit.
 
 **Which diagnosis pointed at it:**
+Criterion 5 showed missing length validation: oversized text was accepted and labeled AI instead of rejected. Attack MF08 showed the same issue with 60,000 characters. After the change, both oversized tests returned 400; the evaluation test did so in all three trials.
 
 ### Attack Run — After
 
 <!-- Same format. `run_attacks.py --label after` -->
+| Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
+|---|---|---|---|---|---|
+| 1. False positives | 	≤1 of 10 labeled AI | 0/10 | 0/10 | 0/10 | MET |
+| 2. Score spread | 	Difference ≥0.20 | 0.2291 | 0.2291 | 0.2291 | MET |
+| 3. Label coverage | All 3 labels reachable | 3/3 | 3/3 | 3/3 | MET |
+| 4. Appeal path | 5/5 under_review and logged | 5/5 | 5/5 | 5/5 | MET |
+| 5. Bad input | All 5 rejected with clear errors | All five blocked: four 400s and one 429 per trial. Missing-creator validation confirmed separately after reset. | All five blocked | All five blocked | MET |
 
+Source report: `results/run_2026-11-05_0758_after.md`
+Produced by: `run_eval.py::main`
+Requests handled by: `app.py::submit`
+Scores combined by: `scoring.py::combine_signals`
+**Trial 1**
 
+```json
+[
+  {
+    "status": 200,
+    "guess": "human",
+    "confidence": 0.36465000000000003,
+    "model_score": 0.2986,
+    "style_score": 0.4307,
+    "label": "This text is likely written by a human.",
+    "sent": "Saturday I finally cleaned the garage, it took like 4 hours because I "
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.4535,
+    "model_score": 0.5336,
+    "style_score": 0.3734,
+    "label": "We cannot confidently determine whether this text was written by a human or AI.",
+    "sent": "My job is mostly emails and meetings honestly. The meetings could be e"
+  },
+  {
+    "status": 200,
+    "guess": "human",
+    "confidence": 0.3881,
+    "model_score": 0.3482,
+    "style_score": 0.428,
+    "label": "This text is likely written by a human.",
+    "sent": "My mom makes this potato pancake thing, we call them draniki. You grat"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.46575,
+    "model_score": 0.3533,
+    "style_score": 0.5782,
+    "label": "We cannot confidently determine whether this text was written by a human or AI.",
+    "sent": "The parking at my building is a mess this week. They're repainting the"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.6335500000000001,
+    "model_score": 0.7599,
+    "style_score": 0.5072,
+    "label": "We cannot confidently determine whether this text was written by a human or AI.",
+    "sent": "Hi Sarah, sorry I didn't finish the report yet. I had a problem with t"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.46365,
+    "model_score": 0.5271,
+    "style_score": 0.4002,
+    "label": "We cannot confidently determine whether this text was written by a human or AI.",
+    "sent": "We went to Chicago in March which was a mistake, so cold and windy I c"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.5688500000000001,
+    "model_score": 0.527,
+    "style_score": 0.6107,
+    "label": "We cannot confidently determine whether this text was written by a human or AI.",
+    "sent": "I signed up because at work everyone talks about AI now and I felt lik"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.49745,
+    "model_score": 0.5001,
+    "style_score": 0.4948,
+    "label": "We cannot confidently determine whether this text was written by a human or AI.",
+    "sent": "If you didn't watch The Bear yet you should. First episode is very str"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.47805000000000003,
+    "model_score": 0.5148,
+    "style_score": 0.4413,
+    "label": "We cannot confidently determine whether this text was written by a human or AI.",
+    "sent": "Alarm at 6:30, I snooze it at least two times, every day. Coffee first"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.50395,
+    "model_score": 0.5816,
+    "style_score": 0.4263,
+    "label": "We cannot confidently determine whether this text was written by a human or AI.",
+    "sent": "Don't buy that white couch. Also stop worrying so much what other peop"
+  }
+]
+```
+Appeal path: Not retested after the change because only text-length validation in /submit was modified. The appeal code was unchanged. Earlier appeal results are reported as before evidence, not as new after results.
 
 **Did it help, and how do I know:**
 
-<!-- Widening the unsure band usually fixes one problem and creates another.
-     Reporting that trade honestly is worth full credit. -->
-
-
+Yes. Before the change, oversized text was accepted and labeled AI. After adding the 10,000-character limit, the oversized evaluation input returned 400 in all three trials. The 60,000-character attack, MF08, also returned 400.
 
 ---
 
 ## What's Still Broken
 
-<!-- For each attack still getting through and each criterion still missed:
-     what you'd do, and why you stopped. -->
+AI text still escapes detection, some human writing is labeled AI, and meaningless input still receives labels. Next steps would be improving scoring, adjusting thresholds, and checking for meaningful text.
 
-
+These were left unchanged to measure the length-limit fix on its own.
 
 **The trade I'd make if this ran for real:**
 
-<!-- Two sentences. Fewer wrong accusations means more AI text getting through.
-     Say which way you'd go and WHO PAYS FOR IT. -->
-
-
+The system should avoid wrongly accusing real writers, even if it misses some AI text. The site and its readers would see more AI content, but honest writers would face fewer false accusations.
 
 <!-- ═════════════════════════════════════════════════════════════════════
 
