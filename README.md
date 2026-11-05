@@ -241,16 +241,20 @@ What I changed: Tested the endpoints using curl, and adjusted the scoring thresh
 **My limits:** 5 per minute, 50 per day
 
 **Why those numbers and not others:**
-<!-- Think about two people: a real writer submitting their own work a few
-     times an hour, and a script sending a thousand variations to map your
-     thresholds. Your numbers have to be liveable for the first and hostile to
-     the second. -->
 
-**What a caller counts as:** <!-- per address, or per creator_id? They fail
-differently — one script can look like a thousand callers, and one household
-can look like one. -->
+- **A real writer** might paste a draft, fix a paragraph, and check again. That is maybe 3 or 4 checks in a few minutes, and a few dozen on a busy day. 5 per minute and 50 per day never get in their way.
+- **A script** trying to find my thresholds needs about 1,000 test submissions. At 5 per minute that takes over 3 hours. At 50 per day it takes about 20 days. That makes the attack slow and easy to spot in the log.
+- I did not go lower (like 2 per minute), because a real writer fixing small mistakes could hit the limit. I did not go higher (like the starter's 10 per minute and 200 per day), because a script could finish in about 5 days instead of 20.
+
+**What a caller counts as:** per `creator_id`. If a request has no `creator_id`, the limit uses the caller's IP address instead.
+
+- **Weakness:** a script can make up a new `creator_id` for every request, and each new ID gets a fresh limit. So my limit only stops a script that keeps using the same ID.
+- Limiting by IP address only would have the opposite problem: people who share one network, like a family or a school, would share one limit.
+- Every blocked request is still saved in the audit log with `"reason": "rate_limited"`, so a flood of blocked requests is easy to find later.
 
 **The run of status codes when I pushed past it:**
+
+```
   [ 1/15] 200
   [ 2/15] 200
   [ 3/15] 200
@@ -274,8 +278,6 @@ can look like one. -->
 10 of 15 were rate limited.
 ```
 
-```
-
 ---
 
 ## Attack Run — Before
@@ -287,7 +289,17 @@ can look like one. -->
 
 **Ten audit log entries from the run**
 
-<!-- Choose entries that show the interesting failures, not the ten easiest. -->
+{"timestamp": "2026-11-04T23:22:53+00:00", "content_id": "62097c21-9ac3-481a-aafc-85915c19a3ea", "creator_id": "attacker_FP02", "guess": "ai", "model_score": 0.7387, "style_score": 0.6388, "combined_score": 0.68875, "label": "This text shows signs of AI-generated writing, but this result is not proof.", "status": "decided"}
+{"timestamp": "2026-11-04T23:22:53+00:00", "content_id": "1861bc1f-85c4-4b82-81f8-c59dc30d753c", "creator_id": "attacker_FP03", "guess": "ai", "model_score": 0.8051, "style_score": 0.6033, "combined_score": 0.7041999999999999, "label": "This text shows signs of AI-generated writing, but this result is not proof.", "status": "decided"}
+{"timestamp": "2026-11-04T23:22:53+00:00", "content_id": "14c15a58-c9f1-4222-b754-b9c5b71438b4", "creator_id": "attacker_FP04", "guess": "ai", "model_score": 0.8329, "style_score": 0.555, "combined_score": 0.6939500000000001, "label": "This text shows signs of AI-generated writing, but this result is not proof.", "status": "decided"}
+{"timestamp": "2026-11-04T23:22:53+00:00", "content_id": "e04e18bc-48c3-4981-91be-46a21ae4f48b", "creator_id": "attacker_FP05", "guess": "ai", "model_score": 0.8005, "style_score": 0.6507, "combined_score": 0.7256, "label": "This text shows signs of AI-generated writing, but this result is not proof.", "status": "decided"}
+{"timestamp": "2026-11-04T23:22:52+00:00", "content_id": "94a27ad2-81f2-4494-afcf-5d861ad11828", "creator_id": "attacker_EV01", "guess": "human", "model_score": 0.1635, "style_score": 0.6136, "combined_score": 0.38855, "label": "This text is likely written by a human.", "status": "decided"}
+{"timestamp": "2026-11-04T23:22:52+00:00", "content_id": "98409580-e2e1-4c29-a58a-267405e95293", "creator_id": "attacker_EV05", "guess": "human", "model_score": 0.3212, "style_score": 0.4369, "combined_score": 0.37905, "label": "This text is likely written by a human.", "status": "decided"}
+{"timestamp": "2026-11-04T23:22:53+00:00", "content_id": "2d681001-523d-438f-b28c-e44fd0ba1442", "creator_id": "attacker_EV09", "guess": "unsure", "model_score": 0.7042, "style_score": 0.514, "combined_score": 0.6091, "label": "We cannot confidently determine whether this text was written by a human or AI.", "status": "decided"}
+{"timestamp": "2026-11-04T23:22:53+00:00", "content_id": "1c43ebcc-3ce0-4887-9e44-c335489d5b38", "creator_id": "attacker_MF03", "guess": "human", "model_score": 0.0, "style_score": 0.6667, "combined_score": 0.33335, "label": "This text is likely written by a human.", "status": "decided"}
+{"timestamp": "2026-11-04T23:22:54+00:00", "content_id": "4c16b865-1c9e-4707-9c40-4e4edd8e41cb", "creator_id": "attacker_MF06", "guess": "ai", "model_score": 0.9969, "style_score": 0.5, "combined_score": 0.7484500000000001, "label": "This text shows signs of AI-generated writing, but this result is not proof.", "status": "decided"}
+{"timestamp": "2026-11-04T23:22:54+00:00", "creator_id": "attacker_flood", "event": "rejected", "status": "rejected", "reason": "rate_limited", "limit": "5 per 1 minute"}
+
 
 ```json
 
@@ -295,8 +307,8 @@ can look like one. -->
 
 **The single worst outcome** — the one I'd least want to explain to a writer
 whose work got caught by it:
-
-
+{"timestamp": "2026-11-04T23:22:53+00:00", "content_id": "1861bc1f-85c4-4b82-81f8-c59dc30d753c", "creator_id": "attacker_FP03", "guess": "ai", "model_score": 0.8051, "style_score": 0.6033, "combined_score": 0.7041999999999999, "label": "This text shows signs of AI-generated writing, but this result is not proof.", "status": "decided"}
+The worst outcome was FP03: genuine human writing by a non-native English speaker was labeled AI with a combined score of 0.7042. This could unfairly damage the writer’s credibility because of how they write. The warning that the result is not proof does not undo the false accusation.
 
 ---
 
