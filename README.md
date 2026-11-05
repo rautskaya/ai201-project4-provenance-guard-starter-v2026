@@ -314,22 +314,168 @@ The worst outcome was FP03: genuine human writing by a non-native English speake
 
 ## Run Log and Verdicts
 
-<!-- Your five criteria across three trials. `run_eval.py --label before`. -->
-
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |
+| 1. False positives | 	≤1 of 10 labeled AI | 0/10 | 0/10 | 0/10 | MET |
+| 2. Score spread | 	Difference ≥0.20 | 0.2291 | 0.2291 | 0.2291 | MET |
+| 3. Label coverage | All 3 labels reachable | 3/3 | 3/3 | 3/3 | MET |
+| 4. Appeal path | 5/5 under_review and logged | 5/5 | 5/5 | 5/5 | MET |
+| 5. Bad input | All 5 rejected with clear errors | 4/5 rejected | 4/5 rejected | 4/5 rejected | MISSED |
 
 **Real output from one trial**, pasted as text, naming the file and function
 that produced it:
 
-```json
+Source report: `results/run_2026-11-04_1621_before.md`
+Produced by: `run_eval.py::main`
+Requests handled by: `app.py::submit`
+Scores combined by: `scoring.py::combine_signals`
 
+**Trial 1**
+
+```json
+[
+  {
+    "status": 200,
+    "guess": "human",
+    "confidence": 0.36465000000000003,
+    "model_score": 0.2986,
+    "style_score": 0.4307,
+    "label": "This text is likely written by a human.",
+    "sent": "Saturday I finally cleaned the garage, it took like 4 hours because I "
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.4535,
+    "model_score": 0.5336,
+    "style_score": 0.3734,
+    "label": "We cannot confidently determine whether this text was written by a human or AI.",
+    "sent": "My job is mostly emails and meetings honestly. The meetings could be e"
+  },
+  {
+    "status": 200,
+    "guess": "human",
+    "confidence": 0.3881,
+    "model_score": 0.3482,
+    "style_score": 0.428,
+    "label": "This text is likely written by a human.",
+    "sent": "My mom makes this potato pancake thing, we call them draniki. You grat"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.46575,
+    "model_score": 0.3533,
+    "style_score": 0.5782,
+    "label": "We cannot confidently determine whether this text was written by a human or AI.",
+    "sent": "The parking at my building is a mess this week. They're repainting the"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.6335500000000001,
+    "model_score": 0.7599,
+    "style_score": 0.5072,
+    "label": "We cannot confidently determine whether this text was written by a human or AI.",
+    "sent": "Hi Sarah, sorry I didn't finish the report yet. I had a problem with t"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.46365,
+    "model_score": 0.5271,
+    "style_score": 0.4002,
+    "label": "We cannot confidently determine whether this text was written by a human or AI.",
+    "sent": "We went to Chicago in March which was a mistake, so cold and windy I c"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.5688500000000001,
+    "model_score": 0.527,
+    "style_score": 0.6107,
+    "label": "We cannot confidently determine whether this text was written by a human or AI.",
+    "sent": "I signed up because at work everyone talks about AI now and I felt lik"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.49745,
+    "model_score": 0.5001,
+    "style_score": 0.4948,
+    "label": "We cannot confidently determine whether this text was written by a human or AI.",
+    "sent": "If you didn't watch The Bear yet you should. First episode is very str"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.47805000000000003,
+    "model_score": 0.5148,
+    "style_score": 0.4413,
+    "label": "We cannot confidently determine whether this text was written by a human or AI.",
+    "sent": "Alarm at 6:30, I snooze it at least two times, every day. Coffee first"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.50395,
+    "model_score": 0.5816,
+    "style_score": 0.4263,
+    "label": "We cannot confidently determine whether this text was written by a human or AI.",
+    "sent": "Don't buy that white couch. Also stop worrying so much what other peop"
+  }
+]
 ```
+
+### Appeal output — Trial 1
+
+Appeals handled by: `app.py::appeal`
+Audit-log output returned by: `app.py::get_log`
+{
+  "count": 5,
+  "entries": [
+    {
+      "content_id": "1861bc1f-85c4-4b82-81f8-c59dc30d753c",
+      "creator_id": "attacker_FP03",
+      "event": "appeal",
+      "reasoning": "I wrote this text myself and disagree with the AI label.",
+      "status": "under_review",
+      "timestamp": "2026-11-05T00:25:44+00:00"
+    },
+    {
+      "content_id": "62097c21-9ac3-481a-aafc-85915c19a3ea",
+      "creator_id": "attacker_FP02",
+      "event": "appeal",
+      "reasoning": "I wrote this formal text myself and disagree with the AI label.",
+      "status": "under_review",
+      "timestamp": "2026-11-05T00:27:10+00:00"
+    },
+    {
+      "content_id": "14c15a58-c9f1-4222-b754-b9c5b71438b4",
+      "creator_id": "attacker_FP04",
+      "event": "appeal",
+      "reasoning": "I wrote this essay myself and disagree with the AI label.",
+      "status": "under_review",
+      "timestamp": "2026-11-05T00:27:15+00:00"
+    },
+    {
+      "content_id": "e04e18bc-48c3-4981-91be-46a21ae4f48b",
+      "creator_id": "attacker_FP05",
+      "event": "appeal",
+      "reasoning": "I wrote this documentation myself and disagree with the AI label.",
+      "status": "under_review",
+      "timestamp": "2026-11-05T00:27:20+00:00"
+    },
+    {
+      "content_id": "e5499a68-395f-4dff-8915-69e6c9b51866",
+      "creator_id": "attacker_FP06",
+      "event": "appeal",
+      "reasoning": "I wrote this text using a template and disagree with the AI label.",
+      "status": "under_review",
+      "timestamp": "2026-11-05T00:27:25+00:00"
+    }
+  ]
+}
 
 **Diagnoses**
 
