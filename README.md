@@ -699,6 +699,12 @@ model need more than the 512 MB free tier. The start command, Python version,
 pinned dependencies, model size and a macOS port note are in
 [RUNNING.md](RUNNING.md#capstone-run-path--path-b-local-with-logs).
 
+**Tested from a clean clone on 2026-11-06:** I cloned the repo into a new
+folder and followed RUNNING.md step by step. Setup, `python detector.py`,
+`python test.py` (9 passed, 0 failed), starting the service, and a `/submit`
+all worked. The one snag: port 5000 is taken by AirPlay Receiver on macOS, so
+it ran on 5001, which RUNNING.md now says.
+
 ## Instrumentation
 
 Every request to `/submit` and `/appeal`, success or failure, writes one JSON
@@ -780,6 +786,12 @@ use. The other nine took **21.1–31.3 ms** (about 0.028 s each).
 
 Failed requests cost almost nothing (under 1 ms), because they're rejected
 before the model runs.
+
+**After the improvement:** the model now loads at startup (see The
+Improvement), so the one-time ~3 s is paid when the service starts, not by a
+user. A hundred submissions a day on a service started once:
+3 s + 100 × 0.03 s = **about 6 s of compute a day**. Every individual
+submission now costs about 0.03 s.
 
 ## Run Log and Verdicts (Capstone)
 
@@ -885,10 +897,89 @@ held in every trial.
 
 ## The Improvement (Capstone)
 
+**What I changed:** the service now warms up the detector **when it starts**,
+not on the first request. `app.py::warm_detector` runs from `app.py::main`
+before the server starts listening. It scores one throwaway sentence, which
+loads torch, transformers, the tokenizer and the `gpt2` weights, **and** runs
+the first forward pass. In debug mode it only runs in the process that
+actually serves (`WERKZEUG_RUN_MAIN`), so the model isn't loaded twice.
+
+**Why this change:** it follows straight from the C4 diagnosis. The first
+request was slow because `detector.py::_load` is lazy, and the stage timings
+showed the first forward pass costs about 1 s on its own. So the existing
+`detector.warm_up()`, which only loads, wouldn't have been enough. Scoring a
+sentence at startup covers both.
+
+### After the fix
+
+Same script, same 23 requests, 3 fresh trials (`python capstone_trial.py
+--label after`). Full output:
+[results/capstone_after_2026-11-06_1132.md](results/capstone_after_2026-11-06_1132.md).
+
+| Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
+|---|---|---|---|---|---|
+| C1. Every request is logged | 23 of 23 | 23/23 | 23/23 | 23/23 | MET |
+| C2. Bad requests get an error, not a crash | 8 of 8 | 8/8 | 8/8 | 8/8 | MET |
+| C3. The logged time is correct (within 20 ms of curl) | 10 of 10 | 10/10 | 10/10 | 10/10 | MET |
+| C4. Every submission under 1 s, even the first | 10 of 10 | 10/10 | 10/10 | 10/10 | **MET** |
+| C5. The original results didn't change | 10 of 10 | 10/10 | 10/10 | 10/10 | MET |
+
+### Before and after, side by side
+
+| Criterion | Before (runs 1 / 2 / 3) | After (runs 1 / 2 / 3) |
+|---|---|---|
+| C1 | 23 / 23 / 23, MET | 23 / 23 / 23, MET |
+| C2 | 8 / 8 / 8, MET | 8 / 8 / 8, MET |
+| C3 | 10 / 10 / 10, MET | 10 / 10 / 10, MET |
+| C4 | 9 / 9 / 9, **MISSED** | 10 / 10 / 10, **MET** |
+| C5 | 10 / 10 / 10, MET | 10 / 10 / 10, MET |
+| First request (`writer-1`) | 4198 / 2626 / 2409 ms | 61 / 30 / 31 ms |
+| Slowest of the 10 normal submissions | 4198 ms | 67 ms |
+
+**Did it help?** Yes. C4 went from missed to met, and the first request is now
+as fast as the rest (30–61 ms instead of 2.4–4.2 s). The other four criteria
+didn't change, so the fix didn't break anything.
+
+**The trade:** the wait moved, it didn't disappear. Time from starting the
+service to it answering `/health`, measured 3 times each:
+
+| | Run 1 | Run 2 | Run 3 |
+|---|---|---|---|
+| Before (lazy load) | 0.4 s | 0.3 s | 0.3 s |
+| After (warm at startup) | 4.6 s | 3.0 s | 2.9 s |
+
+So startup is about 3 s slower. For this service that's the right trade: the
+service starts once and serves many requests, and now nobody waiting on an
+answer pays the cost. It also changes the cost picture: every scored
+submission now costs about 0.03 s, plus about 3 s once per start.
+
 ## What's Still Broken (Capstone)
 
-## How I Used AI (Capstone)
+**No criterion is still missed.** After the fix, all five held in all three
+trials. Here's what's still weak, and why I stopped:
 
+- **Startup is about 3 s slower.** This is the cost of the fix. If the service
+  restarted often (for example on a free host that sleeps), every restart
+  would pay it. I'd fix it by keeping the service running, not by changing the
+  code. I stopped because, run locally, this service starts once.
+- **The log grows forever.** `logs/audit.jsonl` is one file that's only ever
+  appended to, and `cost_report.py` reads all of it each time. That's fine for
+  hundreds of lines and slow for millions. I'd rotate it by day. I stopped
+  because at this size it doesn't matter yet.
+- **A real 500 was never tested.** `app.py::log_crash` is meant to log a
+  request that crashes, but none of my 23 requests can make the service crash,
+  so C2 only proves the 4xx path. I'd add a test that forces the detector to
+  raise. I stopped because it would mean adding a fake failure to the code,
+  which is outside my scope.
+- **`input_preview` stores the first 80 characters of what people wrote.**
+  On a real writing site that's personal text sitting in a log. I'd decide
+  how long to keep it, or log a hash instead. I left it in because the
+  assignment asks for the input in each record.
+
+**What I'd do first with another unit:** test the crash path, because it's the
+only part of the logging I've never seen work. "Every request is logged" is
+only proven for requests that fail politely, and the crash is exactly the case
+where a missing log line would hurt most.
 ---
 
 📖 **How to run this project: [RUNNING.md](RUNNING.md)**
