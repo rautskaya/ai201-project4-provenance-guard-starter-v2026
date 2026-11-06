@@ -783,6 +783,106 @@ before the model runs.
 
 ## Run Log and Verdicts (Capstone)
 
+The criteria are in [criteria.md](criteria.md) (committed before any of these
+runs). Every trial was run by `capstone_trial.py::run_trial`: start `app.py`
+fresh on port 5001, send the fixed 23 requests with curl, stop it, and score
+C1–C5 from the new lines in `logs/audit.jsonl`. Full output:
+[results/capstone_before_2026-11-06_1128.md](results/capstone_before_2026-11-06_1128.md).
+
+### Before the fix
+
+| Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
+|---|---|---|---|---|---|
+| C1. Every request is logged | 23 of 23 | 23/23 | 23/23 | 23/23 | MET |
+| C2. Bad requests get an error, not a crash | 8 of 8 | 8/8 | 8/8 | 8/8 | MET |
+| C3. The logged time is correct (within 20 ms of curl) | 10 of 10 | 10/10 | 10/10 | 10/10 | MET |
+| C4. Every submission under 1 s, even the first | 10 of 10 | 9/10 | 9/10 | 9/10 | **MISSED** |
+| C5. The original results didn't change | 10 of 10 | 10/10 | 10/10 | 10/10 | MET |
+
+The trials really re-ran: the first request's time was different each time
+(4198 ms, 2626 ms, 2409 ms). The guesses were the same each time because the
+`gpt2` scoring has no randomness in it.
+
+### Real output, trial 1
+
+**C1** (written by `audit.py::log_request`, called from `app.py::log_request`):
+23 request lines for 23 requests, in order. The first and the last:
+
+```
+{"timestamp": "2026-11-06T19:28:23+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 200, "duration_ms": 4198.1, "input_chars": 92, "input_preview": "I walked to the market this morning and bought apples, then sat by the river rea", "creator_id": "writer-1", "content_id": "ad76b368-5c41-48a6-a32f-fdc7014ea516", "result": "unsure", "error": null}
+{"timestamp": "2026-11-06T19:28:23+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 429, "duration_ms": 0.3, "input_chars": 58, "input_preview": "Testing the rate limit with the same short sentence again.", "creator_id": "flooder", "content_id": null, "result": null, "error": "rate_limited"}
+```
+
+**C2** (the 8 bad requests; the status comes from `app.py::submit` /
+`app.py::appeal`, or `app.py::rate_limited` for the 429):
+
+| request | expected | got | logged error |
+|---|---|---|---|
+| empty text | 400 | 400 | Text is required |
+| only spaces | 400 | 400 | Text is required |
+| over 10,000 chars | 400 | 400 | Text must be 10,000 characters or fewer |
+| no creator_id | 400 | 400 | Creator ID is required |
+| not JSON | 400 | 400 | Expected a JSON object |
+| appeal unknown id | 404 | 404 | Submission not found |
+| appeal no reasoning | 400 | 400 | Reasoning is required |
+| flooder #6 | 429 | 429 | rate_limited |
+
+**C3 and C4** (`duration_ms` from `app.py::_elapsed_ms`, compared with
+curl's `time_total`):
+
+| # | curl ms | logged ms | diff | under 1 s? |
+|---|---|---|---|---|
+| writer-1 | 4199.5 | 4198.1 | 1.4 | **no** |
+| writer-2 | 29.9 | 28.8 | 1.1 | yes |
+| writer-3 | 33.3 | 32.0 | 1.3 | yes |
+| writer-4 | 28.5 | 27.6 | 0.9 | yes |
+| writer-5 | 29.6 | 28.6 | 1.0 | yes |
+| writer-6 | 20.3 | 19.4 | 0.9 | yes |
+| writer-7 | 25.4 | 24.6 | 0.8 | yes |
+| writer-8 | 25.1 | 24.1 | 0.9 | yes |
+| writer-9 | 25.3 | 24.3 | 1.0 | yes |
+| writer-10 | 26.0 | 25.1 | 0.9 | yes |
+
+**C5** (decision line written by `audit.py::log_decision` in `app.py::submit`):
+the request line and the decision line for writer-5 agree, and the decision
+line still has all nine unit 8 fields:
+
+```
+{"timestamp": "2026-11-06T19:28:23+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 200, "duration_ms": 28.6, "input_chars": 109, "input_preview": "Climate change represents one of the most significant challenges facing humanity", "creator_id": "writer-5", "content_id": "ff35c303-2866-413a-8a9a-777f64cbe292", "result": "ai", "error": null}
+{"timestamp": "2026-11-06T19:28:23+00:00", "content_id": "ff35c303-2866-413a-8a9a-777f64cbe292", "creator_id": "writer-5", "guess": "ai", "model_score": 0.9436, "style_score": 0.6407, "combined_score": 0.79215, "label": "This text shows signs of AI-generated writing, but this result is not proof.", "status": "decided"}
+```
+
+### Diagnosis: C4
+
+**C4 missed in all three trials, always on the same request: the first one
+after startup** (4198 ms, 2626 ms, 2409 ms). The other nine took 19–33 ms.
+
+- **Stage:** the detector, `detector.py::_load`, which `detector.py::perplexity`
+  calls on every request.
+- **Mechanism:** `_load` is lazy. Nothing loads the model when the service
+  starts, so the first `/submit` pays for all of it inside the request. Later
+  requests reuse the global `_model` and skip it. My criterion assumed every
+  request costs the same, but the first one pays a one-time setup cost.
+
+I timed each stage of that first call separately:
+
+| Stage of the first call | Time |
+|---|---|
+| `import torch` | 830 ms |
+| `import transformers` classes | 1,312 ms |
+| load tokenizer | 681 ms |
+| load `gpt2` weights | 597 ms |
+| **first** forward pass | 1,036 ms |
+| second forward pass, for comparison | 18 ms |
+
+So it isn't only loading the weights. Even the first forward pass on an
+already-loaded model takes about a second, because torch sets things up the
+first time it runs. That means just calling the existing `detector.warm_up()`
+(which only loads) would probably still miss the 1 s target.
+
+**Pattern:** there's only one miss, and it has one cause. C1, C2, C3 and C5
+held in every trial.
+
 ## The Improvement (Capstone)
 
 ## What's Still Broken (Capstone)
