@@ -8,6 +8,69 @@ assumed — the starter ships one that already answers.
 
 ---
 
+## Capstone run path — Path B (local with logs)
+
+The service runs on my machine, started by one command. It is not hosted: the
+`gpt2` detector model plus `torch` need more memory than the 512 MB free tier
+(see [Running it somewhere else](#running-it-somewhere-else-unit-9) below).
+
+### Environment
+
+| What | Version / size |
+|---|---|
+| Python | 3.13 (tested on 3.13.13). 3.11–3.13 work; **not 3.14** |
+| Dependencies | `requirements.txt`, every package pinned with lower and upper bounds |
+| Detector model | `gpt2` from Hugging Face, **about 525 MB**, downloaded once to `~/.cache/huggingface/` |
+| API keys | None |
+| OS | Tested on macOS |
+
+### From a clean checkout
+
+```bash
+git clone <this repo's URL> provenance-guard
+cd provenance-guard
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python detector.py        # first time only: downloads the ~525 MB model
+python test.py            # should end with "0 failed"
+```
+
+### Start it
+
+```bash
+python app.py
+```
+
+That's the one command. The service answers on `http://127.0.0.1:5000`.
+
+> **macOS: port 5000 may already be taken.** AirPlay Receiver listens on it, and
+> requests then get a `403` from AirPlay instead of reaching this app. Either turn
+> off AirPlay Receiver in System Settings, or start on another port:
+> `PORT=5001 python app.py` (and use `5001` in the `curl` commands). My capstone
+> session ran on 5001 for this reason.
+
+Check it from a second terminal:
+
+```bash
+curl -X POST http://127.0.0.1:5000/submit \
+  -H "Content-Type: application/json" \
+  -d '{"text": "I walked to the market this morning and bought apples.", "creator_id": "demo"}'
+```
+
+### Where the record goes
+
+Every request to `/submit` and `/appeal` appends one JSON line to
+`logs/audit.jsonl` with `"event": "request"`, including failed ones. Read it back
+with `curl "http://127.0.0.1:5000/log?limit=10"`, and get the timing and cost
+summary with:
+
+```bash
+python cost_report.py
+```
+
+---
+
 ## Before your first class
 
 ```bash
