@@ -122,3 +122,85 @@ The system should handle invalid requests safely and provide useful error messag
      A number you missed stays where it is, gets diagnosed, and gets a fix
      attempted. That's where the points are.
      ───────────────────────────────────────────────────────────────────────── -->
+
+---
+
+# Capstone criteria (unit 9)
+
+Written before running any capstone tests.
+
+**One trial** = start the service fresh with `python app.py`, then send the
+same 23 requests:
+
+- 10 normal submissions (10 different short texts, 10 different creators)
+- 7 bad requests (empty text, only spaces, text over 10,000 characters,
+  no creator_id, not JSON, appeal for an id that doesn't exist, appeal with
+  no reasoning)
+- 6 quick submissions from one creator (the limit is 5 a minute, so the 6th
+  should be blocked)
+
+I run 3 trials. A target has to hold in all 3.
+
+---
+
+## C1. Every request is logged
+
+Each of the 23 requests writes one `"event": "request"` line to the log, with
+the same status code the client got back.
+
+**Target:** 23 of 23
+
+**Why:** The extension's job is to record everything. If even one request is
+missing, a failure could go unnoticed, and my cost number (taken from the log)
+would be wrong.
+
+---
+
+## C2. Bad requests get an error, not a crash
+
+All 8 bad requests (the 7 bad ones plus the 6th quick one) return 400, 404 or
+429 (never 500), and their log line says what went wrong in `error`.
+
+**Target:** 8 of 8
+
+**Why:** Before this unit, a 400 left no trace in the log. Without the reason,
+I can't tell what went wrong. These errors happen the same way every time, so
+there's no excuse for missing one.
+
+---
+
+## C3. The logged time is correct
+
+For the 10 normal submissions, `duration_ms` in the log is within 20 ms of the
+time curl measured.
+
+**Target:** 10 of 10
+
+**Why:** My cost number comes from `duration_ms`, so it has to be right.
+20 ms leaves room for curl's own overhead, but it's less than one normal
+request (about 28 ms), so a broken timer would be caught.
+
+---
+
+## C4. Every submission takes under 1 second, even the first one
+
+For the 10 normal submissions, `duration_ms` is under 1,000 ms. This includes
+the first request after starting the service.
+
+**Target:** 10 of 10
+
+**Why:** Normal requests take about 30 ms, so 1 second is generous. The first
+user after a restart shouldn't wait much longer than everyone else.
+
+---
+
+## C5. The original results didn't change
+
+For the 10 normal submissions, the response and the decision line in the log
+show the same `guess`, `label` and `combined_score`, and the decision line
+still has all nine fields from unit 8.
+
+**Target:** 10 of 10
+
+**Why:** My change added new log lines. It must not break the old decision
+lines, because appeals rely on them.
