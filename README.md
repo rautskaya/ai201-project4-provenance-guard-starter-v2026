@@ -661,6 +661,50 @@ The system should avoid wrongly accusing real writers, even if it misses some AI
      Do not delete and recreate this repository.
      ═════════════════════════════════════════════════════════════════════ -->
 
+<!-- ═══════════════════════ UNIT 9 — THE CAPSTONE ═══════════════════════ -->
+
+## What This Extends
+
+This extends **Provenance Guard** (project 4), the Flask service that labels
+submitted text as likely AI-written or human-written and lets writers appeal.
+
+What's new: the audit log now records **how each request went**, not just what
+was decided. Every request, including the ones that fail, writes a log line
+with how long it took, how long the input was, which endpoint it hit, and the
+HTTP status it returned. That makes the service's speed and failures visible
+after the fact, and gives a measured cost per request.
+
+## The Shape
+
+**Shape A — Deploy and instrument.** The extension is the operational layer:
+a documented one-command run path, timing and status fields on every audit log
+record, failure records for every rejected request, and a measured
+cost-per-request number taken from the log.
+
+**Out of scope:**
+
+- **Hosting.** The detector model is about 550 MB, more than the 512 MB free
+  hosting tier allows, so the service runs locally (Path B).
+- **The detector and scoring.** I'm not changing `detector.py`,
+  `stylometry.py`, or `scoring.py`. The labels should come out the same as in
+  unit 8.
+- **New endpoints or features.** No new routes and no interface. Only
+  `/submit`, `/appeal` and `/log` as they already exist.
+
+## Running It
+
+## Instrumentation
+
+## What It Costs
+
+## Run Log and Verdicts (Capstone)
+
+## The Improvement (Capstone)
+
+## What's Still Broken (Capstone)
+
+## How I Used AI (Capstone)
+
 ---
 
 📖 **How to run this project: [RUNNING.md](RUNNING.md)**
