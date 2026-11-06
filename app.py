@@ -24,6 +24,7 @@ Routes:
     GET  /health      is the service up, and is the model loaded
 """
 
+import os
 import time
 import uuid
 
@@ -368,7 +369,27 @@ def get_log():
     return jsonify({"count": len(entries), "entries": entries})
 
 
+def warm_detector():
+    """
+    Capstone improvement: pay the model's one-time cost at startup.
+
+    Loading alone isn't enough — the first forward pass on a freshly loaded
+    model takes about a second too — so score one throwaway sentence as well.
+    """
+    started = time.perf_counter()
+    try:
+        detector.model_signal("Warming up the detector before the first real request.")
+    except detector.DetectorUnavailable as exc:
+        print(f"  detector warm-up skipped: {exc}")
+        return
+    print(f"  detector warm:   {(time.perf_counter() - started) * 1000:.0f} ms at startup")
+
+
 def main():
+    # In debug mode the reloader runs main() twice: once in a watcher process,
+    # once in the process that serves. Only warm the one that serves.
+    if not config.DEBUG or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+        warm_detector()
     print(f"Provenance Guard on http://{config.HOST}:{config.PORT}")
     print(f"  detector model:  {config.DETECTOR_MODEL}")
     print(f"  rate limiting:   {'ON' if config.RATE_LIMITING_ENABLED else 'off (unit 8)'}")
