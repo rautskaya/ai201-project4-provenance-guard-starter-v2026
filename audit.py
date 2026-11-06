@@ -112,6 +112,36 @@ def log_rejection(creator_id: str, reason: str, **extra) -> dict:
     })
 
 
+def log_request(
+    endpoint: str,
+    method: str,
+    http_status: int,
+    duration_ms: float,
+    input_chars: int,
+    creator_id: str | None = None,
+    content_id: str | None = None,
+    error: str | None = None,
+) -> dict:
+    """
+    Record how one request went — capstone instrumentation.
+
+    One of these per request to /submit or /appeal, success or failure, so a
+    400 or a 500 leaves a trace and every run has a duration you can measure.
+    """
+    return _append({
+        "timestamp": _now(),
+        "event": "request",
+        "endpoint": endpoint,
+        "method": method,
+        "http_status": http_status,
+        "duration_ms": duration_ms,
+        "input_chars": input_chars,
+        "creator_id": creator_id,
+        "content_id": content_id,
+        "error": error,
+    })
+
+
 def _append(entry: dict) -> dict:
     config.LOG_DIR.mkdir(parents=True, exist_ok=True)
     line = json.dumps(entry, ensure_ascii=False)

@@ -668,7 +668,7 @@ The system should avoid wrongly accusing real writers, even if it misses some AI
 This extends **Provenance Guard** (project 4), the Flask service that labels
 submitted text as likely AI-written or human-written and lets writers appeal.
 
-What's new: the audit log now records **how each request went**, not just what
+What's new: the audit log now records how each request went, not just what
 was decided. Every request, including the ones that fail, writes a log line
 with how long it took, how long the input was, which endpoint it hit, and the
 HTTP status it returned. That makes the service's speed and failures visible

@@ -24,9 +24,10 @@ Routes:
     GET  /health      is the service up, and is the model loaded
 """
 
+import time
 import uuid
 
-from flask import Flask, jsonify, request
+from flask import Flask, g, jsonify, request
 
 import audit
 import config
@@ -116,6 +117,75 @@ if config.RATE_LIMITING_ENABLED:
             "message": "Too many submissions. Try again shortly.",
             "limit": str(exc.description),
         }), 429
+
+
+# ── Request instrumentation — CAPSTONE ────────────────────────────────────────
+# Every request to /submit or /appeal writes one "request" entry to the audit
+# log: how long it took, how big the input was, and what status came back.
+# Failures included — a 400 used to leave no trace at all.
+
+LOGGED_ENDPOINTS = ("/submit", "/appeal")
+
+
+def _request_fields() -> tuple[int, str | None]:
+    """Input size and creator id from the request body, if there is one."""
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return 0, None
+    body = payload.get("text") if request.path == "/submit" else payload.get("reasoning")
+    creator = payload.get("creator_id")
+    return (
+        len(body) if isinstance(body, str) else 0,
+        creator if isinstance(creator, str) else None,
+    )
+
+
+def _elapsed_ms() -> float:
+    return round((time.perf_counter() - g.get("start", time.perf_counter())) * 1000, 1)
+
+
+@app.before_request
+def start_timer():
+    g.start = time.perf_counter()
+
+
+@app.after_request
+def log_request(response):
+    if request.path not in LOGGED_ENDPOINTS:
+        return response
+    body = response.get_json(silent=True)
+    if not isinstance(body, dict):
+        body = {}
+    input_chars, creator_id = _request_fields()
+    audit.log_request(
+        endpoint=request.path,
+        method=request.method,
+        http_status=response.status_code,
+        duration_ms=_elapsed_ms(),
+        input_chars=input_chars,
+        creator_id=creator_id,
+        content_id=body.get("content_id"),
+        error=body.get("error"),
+    )
+    g.logged = True
+    return response
+
+
+@app.teardown_request
+def log_crash(exc):
+    """With DEBUG on, an unhandled crash skips after_request — log it here."""
+    if exc is None or g.get("logged") or request.path not in LOGGED_ENDPOINTS:
+        return
+    input_chars, creator_id = _request_fields()
+    audit.log_request(
+        endpoint=request.path,
+        method=request.method,
+        http_status=500,
+        duration_ms=_elapsed_ms(),
+        input_chars=input_chars,
+        creator_id=creator_id,
+        error=repr(exc),
+    )
 
 
 # ── The worked example. Already works. Don't edit. ────────────────────────────
