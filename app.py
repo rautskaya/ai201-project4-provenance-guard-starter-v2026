@@ -125,17 +125,21 @@ if config.RATE_LIMITING_ENABLED:
 # Failures included — a 400 used to leave no trace at all.
 
 LOGGED_ENDPOINTS = ("/submit", "/appeal")
+PREVIEW_CHARS = 80  # enough to recognise a submission, not the whole text
 
 
-def _request_fields() -> tuple[int, str | None]:
-    """Input size and creator id from the request body, if there is one."""
+def _request_fields() -> tuple[int, str | None, str | None]:
+    """Input size, a short preview of the input, and the creator id, if any."""
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):
-        return 0, None
+        return 0, None, None
     body = payload.get("text") if request.path == "/submit" else payload.get("reasoning")
     creator = payload.get("creator_id")
+    if not isinstance(body, str):
+        return 0, None, creator if isinstance(creator, str) else None
     return (
-        len(body) if isinstance(body, str) else 0,
+        len(body),
+        body[:PREVIEW_CHARS],
         creator if isinstance(creator, str) else None,
     )
 
@@ -156,15 +160,17 @@ def log_request(response):
     body = response.get_json(silent=True)
     if not isinstance(body, dict):
         body = {}
-    input_chars, creator_id = _request_fields()
+    input_chars, input_preview, creator_id = _request_fields()
     audit.log_request(
         endpoint=request.path,
         method=request.method,
         http_status=response.status_code,
         duration_ms=_elapsed_ms(),
         input_chars=input_chars,
+        input_preview=input_preview,
         creator_id=creator_id,
         content_id=body.get("content_id"),
+        result=body.get("guess") or body.get("status"),
         error=body.get("error"),
     )
     g.logged = True
@@ -176,13 +182,14 @@ def log_crash(exc):
     """With DEBUG on, an unhandled crash skips after_request — log it here."""
     if exc is None or g.get("logged") or request.path not in LOGGED_ENDPOINTS:
         return
-    input_chars, creator_id = _request_fields()
+    input_chars, input_preview, creator_id = _request_fields()
     audit.log_request(
         endpoint=request.path,
         method=request.method,
         http_status=500,
         duration_ms=_elapsed_ms(),
         input_chars=input_chars,
+        input_preview=input_preview,
         creator_id=creator_id,
         error=repr(exc),
     )

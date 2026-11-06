@@ -714,8 +714,10 @@ unhandled).
 | `http_status` | What came back: 200, 400, 404, 429, 503 or 500 |
 | `duration_ms` | Time from the request arriving to the response leaving |
 | `input_chars` | Length of the input (`text` for /submit, `reasoning` for /appeal) |
+| `input_preview` | **What came in:** the first 80 characters of that input |
 | `creator_id` | Who sent it, if the request said |
 | `content_id` | The id of the decision, on success |
+| `result` | **What came out:** the guess (`ai` / `human` / `unsure`) for /submit, the new status for /appeal |
 | `error` | The error message, on failure (otherwise `null`) |
 
 The existing decision, appeal and rejection entries from units 7 and 8 are
@@ -727,21 +729,21 @@ scored submissions, three bad submissions, one appeal and one appeal for an id
 that doesn't exist.
 
 ```
-{"timestamp": "2026-11-06T19:11:08+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 200, "duration_ms": 4188.3, "input_chars": 92, "creator_id": "writer-1", "content_id": "028d6401-1f77-4f05-bbe4-613bc39ccdff", "error": null}
-{"timestamp": "2026-11-06T19:11:08+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 200, "duration_ms": 37.7, "input_chars": 86, "creator_id": "writer-2", "content_id": "076a591b-e3c1-4dde-b30a-0456fb473765", "error": null}
-{"timestamp": "2026-11-06T19:11:08+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 200, "duration_ms": 30.9, "input_chars": 136, "creator_id": "writer-3", "content_id": "3df077d2-f086-4068-8371-a0f7ae633cce", "error": null}
-{"timestamp": "2026-11-06T19:11:08+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 200, "duration_ms": 25.3, "input_chars": 81, "creator_id": "writer-4", "content_id": "cad4b9fe-0d93-4021-b75b-0d5f25a464f3", "error": null}
-{"timestamp": "2026-11-06T19:11:08+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 200, "duration_ms": 27.3, "input_chars": 109, "creator_id": "writer-5", "content_id": "f5eb2e96-9122-4eeb-826c-ec1b64801941", "error": null}
-{"timestamp": "2026-11-06T19:11:08+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 200, "duration_ms": 23.9, "input_chars": 70, "creator_id": "writer-6", "content_id": "c6f451e5-755f-4ed7-92a7-d661256392d1", "error": null}
-{"timestamp": "2026-11-06T19:11:08+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 200, "duration_ms": 28.8, "input_chars": 113, "creator_id": "writer-7", "content_id": "874b4d48-c1e5-4c9a-ad15-ffc3df66a098", "error": null}
-{"timestamp": "2026-11-06T19:11:09+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 200, "duration_ms": 29.8, "input_chars": 84, "creator_id": "writer-8", "content_id": "3a4ba531-5860-4ce9-a762-5798ba078e2d", "error": null}
-{"timestamp": "2026-11-06T19:11:09+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 200, "duration_ms": 25.9, "input_chars": 105, "creator_id": "writer-9", "content_id": "aef0a7d6-1c94-4422-89fc-5cba92c635cf", "error": null}
-{"timestamp": "2026-11-06T19:11:09+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 200, "duration_ms": 28.4, "input_chars": 97, "creator_id": "writer-10", "content_id": "3aece7a1-a532-46e5-92ea-27216ab442bf", "error": null}
-{"timestamp": "2026-11-06T19:11:09+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 400, "duration_ms": 0.2, "input_chars": 0, "creator_id": "writer-x", "content_id": null, "error": "Text is required"}
-{"timestamp": "2026-11-06T19:11:09+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 400, "duration_ms": 0.2, "input_chars": 16, "creator_id": null, "content_id": null, "error": "Creator ID is required"}
-{"timestamp": "2026-11-06T19:11:09+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 400, "duration_ms": 1.0, "input_chars": 0, "creator_id": null, "content_id": null, "error": "Expected a JSON object"}
-{"timestamp": "2026-11-06T19:11:09+00:00", "event": "request", "endpoint": "/appeal", "method": "POST", "http_status": 200, "duration_ms": 1.1, "input_chars": 34, "creator_id": null, "content_id": "3aece7a1-a532-46e5-92ea-27216ab442bf", "error": null}
-{"timestamp": "2026-11-06T19:11:09+00:00", "event": "request", "endpoint": "/appeal", "method": "POST", "http_status": 404, "duration_ms": 0.8, "input_chars": 4, "creator_id": null, "content_id": null, "error": "Submission not found"}
+{"timestamp": "2026-11-06T19:25:42+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 200, "duration_ms": 4232.2, "input_chars": 92, "input_preview": "I walked to the market this morning and bought apples, then sat by the river rea", "creator_id": "writer-1", "content_id": "c5bc60d9-7785-4e54-aa27-5b869b4cefb0", "result": "unsure", "error": null}
+{"timestamp": "2026-11-06T19:25:42+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 200, "duration_ms": 31.2, "input_chars": 86, "input_preview": "Honestly the bus was late again so I missed the first ten minutes of class. Not ", "creator_id": "writer-2", "content_id": "d60c590b-f74c-4fb3-a6a2-decf14456097", "result": "human", "error": null}
+{"timestamp": "2026-11-06T19:25:42+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 200, "duration_ms": 29.0, "input_chars": 136, "input_preview": "In conclusion, artificial intelligence offers numerous benefits across various i", "creator_id": "writer-3", "content_id": "3de77d4b-83c2-4402-a0c9-a90a481c7cab", "result": "unsure", "error": null}
+{"timestamp": "2026-11-06T19:25:42+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 200, "duration_ms": 30.5, "input_chars": 81, "input_preview": "My grandma makes the best dumplings. She never measures anything, she just knows", "creator_id": "writer-4", "content_id": "9addee0b-3354-421c-8a0a-be6668d1e96b", "result": "unsure", "error": null}
+{"timestamp": "2026-11-06T19:25:42+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 200, "duration_ms": 26.4, "input_chars": 109, "input_preview": "Climate change represents one of the most significant challenges facing humanity", "creator_id": "writer-5", "content_id": "3def8ac0-8d20-497c-be98-ce563082e18b", "result": "ai", "error": null}
+{"timestamp": "2026-11-06T19:25:42+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 200, "duration_ms": 21.1, "input_chars": 70, "input_preview": "lol my cat knocked my coffee onto my keyboard and now the e key sticks", "creator_id": "writer-6", "content_id": "cfc45e89-d424-4b7b-84de-91249064e20a", "result": "human", "error": null}
+{"timestamp": "2026-11-06T19:25:42+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 200, "duration_ms": 27.1, "input_chars": 113, "input_preview": "Effective time management is essential for achieving personal and professional g", "creator_id": "writer-7", "content_id": "39d53d25-c607-40a5-82a3-9a50cd715a1b", "result": "ai", "error": null}
+{"timestamp": "2026-11-06T19:25:42+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 200, "duration_ms": 26.4, "input_chars": 84, "input_preview": "We drove six hours to see the lake and it rained the entire weekend. Still worth", "creator_id": "writer-8", "content_id": "28172995-e5ca-4b90-9d83-064a778efbb1", "result": "human", "error": null}
+{"timestamp": "2026-11-06T19:25:42+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 200, "duration_ms": 27.3, "input_chars": 105, "input_preview": "The French Revolution was a period of radical political and societal change in F", "creator_id": "writer-9", "content_id": "53444b3e-b94c-49ed-8334-2296c0493b87", "result": "ai", "error": null}
+{"timestamp": "2026-11-06T19:25:42+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 200, "duration_ms": 31.3, "input_chars": 97, "input_preview": "I tried to fix the sink myself and now there is water in the hallway. Calling a ", "creator_id": "writer-10", "content_id": "ac027ba3-eded-47f8-8911-4fc936f7a289", "result": "human", "error": null}
+{"timestamp": "2026-11-06T19:25:42+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 400, "duration_ms": 0.3, "input_chars": 0, "input_preview": "", "creator_id": "writer-x", "content_id": null, "result": null, "error": "Text is required"}
+{"timestamp": "2026-11-06T19:25:42+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 400, "duration_ms": 0.3, "input_chars": 16, "input_preview": "Some words here.", "creator_id": null, "content_id": null, "result": null, "error": "Creator ID is required"}
+{"timestamp": "2026-11-06T19:25:42+00:00", "event": "request", "endpoint": "/submit", "method": "POST", "http_status": 400, "duration_ms": 0.1, "input_chars": 0, "input_preview": null, "creator_id": null, "content_id": null, "result": null, "error": "Expected a JSON object"}
+{"timestamp": "2026-11-06T19:25:42+00:00", "event": "request", "endpoint": "/appeal", "method": "POST", "http_status": 200, "duration_ms": 0.9, "input_chars": 34, "input_preview": "I wrote this myself about my sink.", "creator_id": null, "content_id": "ac027ba3-eded-47f8-8911-4fc936f7a289", "result": "under_review", "error": null}
+{"timestamp": "2026-11-06T19:25:42+00:00", "event": "request", "endpoint": "/appeal", "method": "POST", "http_status": 404, "duration_ms": 0.7, "input_chars": 4, "input_preview": "mine", "creator_id": null, "content_id": null, "result": null, "error": "Submission not found"}
 ```
 
 ## What It Costs
@@ -750,30 +752,30 @@ There's no API bill: the detector model runs on laptop. So the cost of one
 run is **seconds of compute**, measured as `duration_ms` in the log.
 
 **How it was measured:** Started the service fresh, sent 10 scored submissions
-of 70–136 characters, and ran `python cost_report.py --since 2026-11-06T19:10:56`,
+of 70–136 characters, and ran `python cost_report.py --since 2026-11-06T19:25:30`,
 which averages the `duration_ms` of every `/submit` that returned 200:
 
 ```
 endpoint  status count    avg ms    p50 ms    p95 ms    max ms
-/appeal      200     1       1.1       1.1       1.1       1.1
-/appeal      404     1       0.8       0.8       0.8       0.8
-/submit      200    10     444.6      28.4    4188.3    4188.3
-/submit      400     3       0.5       0.2       1.0       1.0
+/appeal      200     1       0.9       0.9       0.9       0.9
+/appeal      404     1       0.7       0.7       0.7       0.7
+/submit      200    10     448.2      27.3    4232.2    4232.2
+/submit      400     3       0.2       0.3       0.3       0.3
 
-Cost of one scored /submit: 0.445 s of compute (average of 10)
-100 submissions a day: 100 x 0.445 s = 44.5 s of compute
+Cost of one scored /submit: 0.448 s of compute (average of 10)
+100 submissions a day: 100 x 0.448 s = 44.8 s of compute
 ```
 
-**Measured cost: 0.445 s of compute per scored submission**, averaged over 10.
+**Measured cost: 0.448 s of compute per scored submission**, averaged over 10.
 That average hides two very different numbers. The **first** request after
-startup took **4.19 s**, because `detector.py` loads the `gpt2` model on first
-use. The other nine took **23.9–37.7 ms** (about 0.029 s each).
+startup took **4.23 s**, because `detector.py` loads the `gpt2` model on first
+use. The other nine took **21.1–31.3 ms** (about 0.028 s each).
 
 **A hundred people a day:**
 - If the service stays running, only the first request of the day pays the load:
-  4.19 s + 99 × 0.029 s = **about 7.1 s of compute a day**.
-- If every request were a cold start: 100 × 4.19 s = **419 s a day**.
-- The 10-run average gives 100 × 0.445 s = **44.5 s a day**, which sits in
+  4.23 s + 99 × 0.028 s = **about 7.0 s of compute a day**.
+- If every request were a cold start: 100 × 4.23 s = **423 s a day**.
+- The 10-run average gives 100 × 0.448 s = **44.8 s a day**, which sits in
   between because 1 of my 10 was cold.
 
 Failed requests cost almost nothing (under 1 ms), because they're rejected

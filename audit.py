@@ -118,8 +118,10 @@ def log_request(
     http_status: int,
     duration_ms: float,
     input_chars: int,
+    input_preview: str | None = None,
     creator_id: str | None = None,
     content_id: str | None = None,
+    result: str | None = None,
     error: str | None = None,
 ) -> dict:
     """
@@ -127,6 +129,9 @@ def log_request(
 
     One of these per request to /submit or /appeal, success or failure, so a
     400 or a 500 leaves a trace and every run has a duration you can measure.
+
+    `input_preview` is the first 80 characters of what came in; `result` is
+    what came out — the guess for /submit, the new status for /appeal.
     """
     return _append({
         "timestamp": _now(),
@@ -136,8 +141,10 @@ def log_request(
         "http_status": http_status,
         "duration_ms": duration_ms,
         "input_chars": input_chars,
+        "input_preview": input_preview,
         "creator_id": creator_id,
         "content_id": content_id,
+        "result": result,
         "error": error,
     })
 
